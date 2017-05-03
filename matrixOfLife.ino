@@ -4,30 +4,34 @@ LedControl lc = LedControl(10, 8, 9, 1);
 int w = 8;
 boolean world[8][8];
 int delaytime = 10;
-boolean alive = false;
+int deathDelay = 2000;
+int stasisDelay = 8000;
+
+boolean dead = false;
+boolean stasis = false;
 
 void setup() {
   Serial.begin(9600);
   randomSeed(analogRead(0));
-  /*
-    The MAX72XX is in power-saving mode on startup,
-    we have to do a wakeup call
-  */
+
   lc.shutdown(0, false);
-  /* Set the brightness to a medium values */
   lc.setIntensity(0, 0.1);
-  /* and clear the display */
   lc.clearDisplay(0);
+
+  initialize();
 }
 
 void loop() {
-  if (alive) {
-    generate();
-  } else {
-    delay(1000);
+  if (dead) {
+    delay(deathDelay);
     initialize();
+  } else if (stasis) {
+    delay(stasisDelay);
+    initialize();
+  } else {
+    generate();
   }
-  
+
   printWorld();
   show();
 
@@ -40,12 +44,14 @@ void initialize() {
       world[x][y] = random(2);
     }
   }
-  alive = true;
+  dead = false;
+  stasis = false;
 }
 
 void generate() {
   boolean newWorld[8][8];
   int stasisCount = 0;
+  int liveDots = 0;
   for (int x = 0; x < w; x++) {
     for (int y = 0; y < w; y++) {
       int neighbors = 0;
@@ -71,12 +77,13 @@ void generate() {
         newWorld[x][y] = world[x][y];  // Stasis
         stasisCount++;
       }
+
+      liveDots += world[x][y];
     }
   }
 
-  if(stasisCount == 64){
-    alive = false;
-  }
+  dead = (liveDots == 0);
+  stasis = (stasisCount == 64);  
 
   for (int x = 0; x < w; x++) {
     for (int y = 0; y < w; y++) {
